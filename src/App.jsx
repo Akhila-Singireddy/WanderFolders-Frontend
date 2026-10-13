@@ -70,48 +70,55 @@ export default function App() {
     if (pics.length) { patchTrip(trip.id, { [target]: [...(trip[target] || []), ...pics] }); toast(`${pics.length} photo${pics.length===1?"":"s"} added ✨`); }
   }
   async function saveTrip(e) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!form.name.trim() || !form.destination.trim()) return;
+  if (!form.name.trim() || !form.destination.trim()) return;
 
-    try {
-      const isEditing = Boolean(editingId);
-      const existingTrip = trips.find(t => t.id === editingId);
+  const isEditing = Boolean(editingId);
+  const existingTrip = trips.find(t => t.id === editingId);
 
-      const tripData = isEditing
-        ? { ...existingTrip, ...form, name: form.name.trim(), destination: form.destination.trim() }
-        : freshTrip(form);
-
-      const response = await fetch(
-        isEditing ? `${API_URL}/${editingId}` : API_URL,
-        {
-          method: isEditing ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(tripData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Could not save trip");
+  const tripData = isEditing
+    ? {
+        ...existingTrip,
+        ...form,
+        name: form.name.trim(),
+        destination: form.destination.trim()
       }
+    : freshTrip(form);
 
-      const savedTrip = await response.json();
-
-      if (isEditing) {
-        setTrips(old => old.map(t => t.id === editingId ? savedTrip : t));
-      } else {
-        setTrips(old => [savedTrip, ...old]);
-        setSelectedId(savedTrip.id);
-        setSection("Memories");
+  try {
+    const response = await fetch(
+      isEditing ? `${API_URL}/${editingId}` : API_URL,
+      {
+        method: isEditing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tripData)
       }
+    );
 
-      setShowForm(false);
-      toast(isEditing ? "Trip updated 💖" : "Your trip is saved! 🎉");
-    } catch (error) {
-      console.error("Saving trip failed:", error);
-      toast("Could not save trip. Please try again.");
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
     }
+
+    const savedTrip = await response.json();
+
+    if (isEditing) {
+      setTrips(old =>
+        old.map(t => t.id === editingId ? savedTrip : t)
+      );
+    } else {
+      setTrips(old => [savedTrip, ...old]);
+      setSelectedId(savedTrip.id);
+      setSection("Memories");
+    }
+
+    setShowForm(false);
+    toast(isEditing ? "Trip updated 💖" : "Trip saved to server! 🎉");
+  } catch (error) {
+    console.error("Trip save failed:", error);
+    toast("Could not save trip to server. Check the connection.");
   }
+}    
   function addEntry(e) { e.preventDefault(); if (!trip || !entry.title.trim()) return;
     const key = ({"Memories":"memories","Checklist":"checklist","Expenses":"expenses","Itinerary":"itinerary","Mood Board":"moodBoard"})[section];
     if (!key) return;
