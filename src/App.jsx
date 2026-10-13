@@ -69,10 +69,48 @@ export default function App() {
     for (const file of Array.from(files || [])) if (file.type.startsWith("image/")) pics.push({ id: crypto.randomUUID?.() || String(Date.now()+Math.random()), name:file.name, src:await readImage(file) });
     if (pics.length) { patchTrip(trip.id, { [target]: [...(trip[target] || []), ...pics] }); toast(`${pics.length} photo${pics.length===1?"":"s"} added ✨`); }
   }
-  function saveTrip(e) { e.preventDefault(); if (!form.name.trim() || !form.destination.trim()) return;
-    if (editingId) patchTrip(editingId, { ...form, name:form.name.trim(), destination:form.destination.trim() });
-    else { const t=freshTrip(form); setTrips(old => [t,...old]); setSelectedId(t.id); setSection("Memories"); }
-    setShowForm(false); toast(editingId ? "Trip updated 💖" : "Your new trip folder is ready! 🎉");
+  async function saveTrip(e) {
+    e.preventDefault();
+
+    if (!form.name.trim() || !form.destination.trim()) return;
+
+    try {
+      const isEditing = Boolean(editingId);
+      const existingTrip = trips.find(t => t.id === editingId);
+
+      const tripData = isEditing
+        ? { ...existingTrip, ...form, name: form.name.trim(), destination: form.destination.trim() }
+        : freshTrip(form);
+
+      const response = await fetch(
+        isEditing ? `${API_URL}/${editingId}` : API_URL,
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(tripData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Could not save trip");
+      }
+
+      const savedTrip = await response.json();
+
+      if (isEditing) {
+        setTrips(old => old.map(t => t.id === editingId ? savedTrip : t));
+      } else {
+        setTrips(old => [savedTrip, ...old]);
+        setSelectedId(savedTrip.id);
+        setSection("Memories");
+      }
+
+      setShowForm(false);
+      toast(isEditing ? "Trip updated 💖" : "Your trip is saved! 🎉");
+    } catch (error) {
+      console.error("Saving trip failed:", error);
+      toast("Could not save trip. Please try again.");
+    }
   }
   function addEntry(e) { e.preventDefault(); if (!trip || !entry.title.trim()) return;
     const key = ({"Memories":"memories","Checklist":"checklist","Expenses":"expenses","Itinerary":"itinerary","Mood Board":"moodBoard"})[section];
