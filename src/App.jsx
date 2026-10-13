@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
+const API_URL = import.meta.env.VITE-API-URL || "https://wanderfolders-backend.onrender.com/api/folders";
 
 const SECTIONS = ["Memories", "Checklist", "Expenses", "Itinerary", "Mood Board", "Photos"];
 const freshTrip = (form) => ({
@@ -32,9 +33,31 @@ export default function App() {
   const profilePicker = useRef(null);
   const trip = trips.find((item) => item.id === selectedId);
 
-  useEffect(() => { localStorage.setItem("wonderfolders-trips", JSON.stringify(trips)); }, [trips]);
-  useEffect(() => { localStorage.setItem("wonderfolders-profile", profile); }, [profile]);
-  useEffect(() => { if (profilePhoto) localStorage.setItem("wonderfolders-profile-photo", profilePhoto); }, [profilePhoto]);
+  useEffect(() => {
+    async function loadTrips() {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Could not load trips");
+        const savedTrips = await response.json();
+        setTrips(savedTrips);
+        localStorage.setItem("wonderfolders-trips", JSON.stringify(savedTrips));
+      } catch (error) {
+        console.error("Loading trips failed:", error);
+        toast("Could not load trips from the server");
+      }
+    }
+    loadTrips();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("wonderfolders-profile", profile);
+  }, [profile]);
+
+  useEffect(() => {
+    if (profilePhoto) {
+      localStorage.setItem("wonderfolders-profile-photo", profilePhoto);
+    }
+  }, [profilePhoto]);
   function toast(message) { setNotice(message); window.setTimeout(() => setNotice(""), 2400); }
   function patchTrip(id, change) { setTrips(old => old.map(t => t.id === id ? { ...t, ...change } : t)); }
   function openCreate() { setEditingId(null); setForm(blankForm); setShowForm(true); }
