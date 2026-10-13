@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
-const API_URL = import.meta.env.VITE-API-URL || "https://wanderfolders-backend.onrender.com/api/folders";
+const API_URL = import.meta.env.VITE_API_URL || "https://wanderfolders-backend.onrender.com/api/folders";
 
 const SECTIONS = ["Memories", "Checklist", "Expenses", "Itinerary", "Mood Board", "Photos"];
 const freshTrip = (form) => ({
